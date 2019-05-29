@@ -20,7 +20,7 @@ function LetsGoAgain() {
 }
 
 function StartTTV(TMI, username, channel, timeout){
-    if (window.location.protocol === 'https://'){
+    if (window.location.protocol === 'https:'){
         ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443')
     } else {
         ws = new WebSocket('ws://irc-ws.chat.twitch.tv:80')
