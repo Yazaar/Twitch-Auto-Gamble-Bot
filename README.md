@@ -17,5 +17,6 @@ Each time that you win is the value set to your start value<br>
   <li>Type the commandname in the 6:th box, for example "!gamble"</li>
   <li>Type something that can be recognized as a win in the 7:th box, for example "Yazaar won" if the response is "Yazaar won ... ..."</li>
   <li>Type the start value for gamble in the 8:th box</li>
+  <li>Type the value where you would like to quit gambling (when the balance becomes something lower than the input, for example -25000)</li>
 </ol>
 To see outputs, open up the console in your browser (F12 or CTRL+SHIFT+I or rightclick >> inspect >> console)
