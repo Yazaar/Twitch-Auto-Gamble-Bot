@@ -5,7 +5,7 @@ Each time that you lose is the value multiplied with 2<br>
 Each time that you win is the value set to your start value<br>
 (pretty solid strategy to increase your points, but still a risk of losing it all!)
 <br><br>
-<a href="https://yazaar.github.io/Twitch-Auto-Gamble-Bot/">PROJECT URL</a>
+<h3><a href="https://yazaar.github.io/Twitch-Auto-Gamble-Bot/">PROJECT URL</a></h3>
 <h3>Setup:</h3>
 <ol>
   <li>Open up the URL (<a href="https://yazaar.github.io/Twitch-Auto-Gamble-Bot/">THIS URL</a>)</li>
