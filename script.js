@@ -8,7 +8,9 @@ let win
 let start
 let current
 let bot
+let LowerLimit
 let GoAgain
+let balance = 0
 
 
 function sendMessage(message) {
@@ -48,6 +50,8 @@ function StartTTV(TMI, username, channel, timeout){
         }
         clearInterval(GoAgain)
         if (win.test(msg)){
+            balance += parseInt(current)
+            document.getElementById('balance').innerHTML = new String(balance).valueOf()
             console.log('won')
             if (current == start){
                 current = new String(parseInt(current)+1).valueOf()
@@ -60,7 +64,13 @@ function StartTTV(TMI, username, channel, timeout){
             }, timeout)
             return
         }
+        balance -= parseInt(current)
+        document.getElementById('balance').innerHTML = new String(balance).valueOf()
         console.log('lost')
+        if (balance < LowerLimit){
+            console.log('Lost too much there. Canceled the gambling for you.')
+            return
+        }
         current = new String(parseInt(current)*2).valueOf()
         setTimeout(()=>{
             sendMessage(command + ' ' + current)
@@ -90,11 +100,13 @@ document.getElementById('go').addEventListener('click', () => {
     channel = document.getElementById('channel').value
     command = document.getElementById('command').value
     start = parseInt(document.getElementById('start').value)
+    LowerLimit = parseInt(document.getElementById('LowerLimit').value)
+
     win = document.getElementById('win').value
     bot = document.getElementById('bot').value.toLowerCase()
     bot = new RegExp('^:' + bot + '!' + bot + '@' + bot + '\.tmi\.twitch\.tv')
-    if (isNaN(timeout) || isNaN(start)){
-        console.log('"timeout" and "start gamble" have to be an int :)')
+    if (isNaN(timeout) || isNaN(start) || isNaN(LowerLimit)){
+        console.log('"timeout", "start gamble" and "Lower limit" have to be ints :)')
         return
     }
     if (timeout < 1 || start < 1){

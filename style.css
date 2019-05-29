@@ -32,3 +32,13 @@ div#go {
 div#go:hover {
     background: rgba(255, 255, 255, .5);
 }
+
+h3 {
+    color: #ffffff;
+    margin: 0;
+}
+
+p {
+    color: #ffffff;
+    margin: 0;
+}
