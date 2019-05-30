@@ -2,9 +2,9 @@
 It does actually work, but watch out. Different channels have different winrates... (lower winrate higher of a risk)
 <h3>How it works:</h3>
 You specify a start gamble value<br><br>
-Each time that you lose is the value multiplied with 2<br>
-Each time that you win is the value set to your start value<br>
-(pretty solid strategy to increase your points, but still a risk of losing it all!)
+Each time that you lose is the value multiplied by 2<br>
+Each time that you win is the value set to your start value (or start value +1)<br>
+(pretty solid strategy to increase your points, but still at risk of losing it all!)
 <br><br>
 <h3><a href="https://yazaar.github.io/Twitch-Auto-Gamble-Bot/">PROJECT URL</a></h3>
 <h3>Setup:</h3>
