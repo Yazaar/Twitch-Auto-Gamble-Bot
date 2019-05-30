@@ -67,10 +67,8 @@ function StartTTV(TMI, username, channel){
             return
         }
         if (IdentifyMessage.test(msg) === false){
-            console.log('rip')
             return
         }
-        console.log('pass')
         if (win.test(msg)){
             scores.wins++
         } else {
