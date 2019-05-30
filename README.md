@@ -1,5 +1,5 @@
 <h1>"Terrible" auto gambling bot for twitch chatbots, for example StreamElements</h1>
-It does actually work, but watch out. Different channels has different winrates... (lower winrate higher of a risk)
+It does actually work, but watch out. Different channels have different winrates... (lower winrate higher of a risk)
 <h3>How it works:</h3>
 You specify a start gamble value<br><br>
 Each time that you lose is the value multiplied with 2<br>
