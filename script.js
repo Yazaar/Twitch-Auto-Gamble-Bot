@@ -12,6 +12,7 @@ let LowerLimit
 let IdentifyMessage
 let balance = 0
 let scores = {'wins':0, 'losses':0}
+let MainLoop
 
 let LatestMessage
 let NewMessage = false
@@ -82,6 +83,11 @@ function StartTTV(TMI, username, channel){
             balance -= current
         }
 
+        if (balance < LowerLimit){
+            console.log('Whoops... You seem to have bypassed your lower limit, sorry :) But I am disabling the auto gamble right now!')
+            clearInterval(MainLoop)
+        }
+
         document.getElementById('balance').innerHTML = new String(balance).valueOf()
 
         NewMessage = true
@@ -131,5 +137,5 @@ document.getElementById('go').addEventListener('click', () => {
     win = new RegExp(document.getElementById('win').value)
     current = start
     StartTTV(TMI, username, channel)
-    setInterval(StartGamble , timeout)
+    MainLoop = setInterval(StartGamble , timeout)
 })
