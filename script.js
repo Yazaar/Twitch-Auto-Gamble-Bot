@@ -9,19 +9,38 @@ let start
 let current
 let bot
 let LowerLimit
-let GoAgain
+let IdentifyMessage
 let balance = 0
+let scores = {'wins':0, 'losses':0}
 
+let LatestMessage
+let NewMessage = false
 
 function sendMessage(message) {
     ws.send("PRIVMSG #" + channel + " :" + message + "\r\n")
 }
 
-function LetsGoAgain() {
+function StartGamble() {
+    if (NewMessage === true){
+        NewMessage = false
+        if (win.test(LatestMessage) === true){
+            if (current === start){
+                current = start+1
+            } else {
+                current = start
+            }
+            sendMessage(command + ' ' + current)
+            return
+        }
+        current = current * 2
+        sendMessage(command + ' ' + current)
+        return
+    }
     sendMessage(command + ' ' + current)
+    return
 }
 
-function StartTTV(TMI, username, channel, timeout){
+function StartTTV(TMI, username, channel){
     if (window.location.protocol === 'https:'){
         ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443')
     } else {
@@ -40,7 +59,6 @@ function StartTTV(TMI, username, channel, timeout){
             if (! message.data.includes('PRIVMSG')){
                 console.log('Connected!')
                 sendMessage(command + ' ' + current)
-                GoAgain = setTimeout(LetsGoAgain, timeout*0.8)
             }
             return
         }
@@ -48,34 +66,28 @@ function StartTTV(TMI, username, channel, timeout){
         if (bot.test(msg) === false){
             return
         }
-        clearInterval(GoAgain)
+        if (IdentifyMessage.test(msg) === false){
+            console.log('rip')
+            return
+        }
+        console.log('pass')
         if (win.test(msg)){
-            balance += parseInt(current)
-            document.getElementById('balance').innerHTML = new String(balance).valueOf()
-            console.log('won')
-            if (current == start){
-                current = new String(parseInt(current)+1).valueOf()
-            } else {
-                current = new String(start).valueOf()
-            }
-            setTimeout(()=>{
-                sendMessage(command + ' ' + current)
-                GoAgain = setInterval(LetsGoAgain, timeout)
-            }, timeout)
-            return
+            scores.wins++
+        } else {
+            scores.losses++
         }
-        balance -= parseInt(current)
+        document.getElementById('winrate').innerHTML = ((scores.wins/(scores.wins+scores.losses))*100).toFixed(2) + '%'
+
+        if (win.test(msg)){
+            balance += current
+        } else {
+            balance -= current
+        }
+
         document.getElementById('balance').innerHTML = new String(balance).valueOf()
-        console.log('lost')
-        if (balance < LowerLimit){
-            console.log('Lost too much there. Canceled the gambling for you.')
-            return
-        }
-        current = new String(parseInt(current)*2).valueOf()
-        setTimeout(()=>{
-            sendMessage(command + ' ' + current)
-            GoAgain = setInterval(LetsGoAgain, timeout)
-        }, timeout)
+
+        NewMessage = true
+        LatestMessage = msg
     }
     
     ws.onclose = (message) => {
@@ -104,7 +116,6 @@ document.getElementById('go').addEventListener('click', () => {
 
     win = document.getElementById('win').value
     bot = document.getElementById('bot').value.toLowerCase()
-    bot = new RegExp('^:' + bot + '!' + bot + '@' + bot + '\.tmi\.twitch\.tv')
     if (isNaN(timeout) || isNaN(start) || isNaN(LowerLimit)){
         console.log('"timeout", "start gamble" and "Lower limit" have to be ints :)')
         return
@@ -117,7 +128,10 @@ document.getElementById('go').addEventListener('click', () => {
         console.log('Invalid TMI')
         return
     }
+    bot = new RegExp('^:' + bot + '!' + bot + '@' + bot + '\.tmi\.twitch\.tv')
+    IdentifyMessage = RegExp(document.getElementById('IdentifyMessage').value)
     win = new RegExp(document.getElementById('win').value)
-    current = new String(start).valueOf()
-    StartTTV(TMI, username, channel, timeout)
+    current = start
+    StartTTV(TMI, username, channel)
+    setInterval(StartGamble , timeout)
 })
