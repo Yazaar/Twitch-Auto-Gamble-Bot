@@ -56,6 +56,10 @@ function StartTTV(TMI, username, channel){
     }
 
     ws.onmessage = (message) => {
+        if (message.data === "PING :tmi.twitch.tv\r\n") {
+            ws.send("PONG :tmi.twitch.tv\r\n")
+            return
+        }
         if(message.data.includes(':End of /NAMES list')){
             if (! message.data.includes('PRIVMSG')){
                 console.log('Connected!')
