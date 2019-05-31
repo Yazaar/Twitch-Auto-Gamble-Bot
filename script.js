@@ -153,6 +153,6 @@ document.getElementById('go').addEventListener('click', () => {
     StartTTV(TMI, username, channel)
     MainLoop = setInterval(StartGamble , timeout)
     SecondaryLoop = setInterval(()=>{
-        sendMessage('/me [Yazaar Gamble Script] Is this script anoying you? If so, take action as the caster and type "--DisableGambleScript" to exit immediately! Sorry for the inconvenience... NotLikeThis')
+        sendMessage('/me [Yazaar Gamble Script] Is this script annoying you? If so, take action as the caster and type "--DisableGambleScript" to exit immediately! Sorry for the inconvenience... NotLikeThis')
     }, timeout*8)
 })
