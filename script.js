@@ -8,12 +8,13 @@ let win
 let start
 let current
 let bot
+let caster
 let LowerLimit
 let IdentifyMessage
 let balance = 0
 let scores = {'wins':0, 'losses':0}
 let MainLoop
-
+let SecondaryLoop
 let LatestMessage
 let NewMessage = false
 
@@ -56,6 +57,14 @@ function StartTTV(TMI, username, channel){
     }
 
     ws.onmessage = (message) => {
+        if (caster.test(message.data) && message.data.includes('--DisableGambleScript')){
+            clearInterval(MainLoop)
+            clearInterval(SecondaryLoop)
+            console.log('The caster for the channel took action and disabled this script')
+            sendMessage('Got it, disabling the script right now')
+            ws.close()
+            return
+        }
         if (message.data === "PING :tmi.twitch.tv\r\n") {
             ws.send("PONG :tmi.twitch.tv\r\n")
             return
@@ -137,9 +146,13 @@ document.getElementById('go').addEventListener('click', () => {
         return
     }
     bot = new RegExp('^:' + bot + '!' + bot + '@' + bot + '\.tmi\.twitch\.tv')
+    caster = new RegExp('^:' + channel.toLowerCase() + '!' + channel.toLowerCase() + '@' + channel.toLowerCase() + '\.tmi\.twitch\.tv')
     IdentifyMessage = RegExp(document.getElementById('IdentifyMessage').value)
     win = new RegExp(document.getElementById('win').value)
     current = start
     StartTTV(TMI, username, channel)
     MainLoop = setInterval(StartGamble , timeout)
+    SecondaryLoop = setInterval(()=>{
+        sendMessage('/me [Yazaar Gamble Script] Is this script anoying you? If so, take action as the caster and type "--DisableGambleScript" to exit immediately! Sorry for the inconvenience... NotLikeThis')
+    }, timeout*8)
 })
