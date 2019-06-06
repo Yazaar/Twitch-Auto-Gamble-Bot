@@ -99,6 +99,7 @@ function StartTTV(TMI, username, channel){
         if (balance < LowerLimit){
             console.log('Whoops... You seem to have bypassed your lower limit, sorry :) But I am disabling the auto gamble right now!')
             clearInterval(MainLoop)
+            clearInterval(SecondaryLoop)
         }
 
         document.getElementById('balance').innerHTML = new String(balance).valueOf()
