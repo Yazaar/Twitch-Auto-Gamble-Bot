@@ -24,9 +24,13 @@
     <input type="text" placeholder="Win regex" id="winRegex" title="ex: Username won \d+ points in roulette">
     <label for="msgFilter">Start amount:</label>
     <input type="number" placeholder="Start amount" id="startAmount" title="ex: 100">
-    <label for="msgFilter">Max total loss:</label>
+    <label for="msgFilter">Lowest allowed balance change:</label>
     <input type="number" placeholder="Lower limit" id="lowerLimit" title="ex: -5000">
-    <p id="status">Status: <span></span></p>
+    <div>
+        <input type="checkbox" id="stopBeforeLowerLimit">
+        <label for="stopBeforeLowerLimit">Stop before bypassing lower limit</label>
+    </div>
+    <p id="status">Status: <span>offline</span></p>
     <div id="go" class="button">GO</div>
     <h3>Change in balance since start:</h3>
     <p id="balance">0</p>

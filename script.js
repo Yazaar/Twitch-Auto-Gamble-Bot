@@ -1,5 +1,5 @@
 (function(){
-    const clientId = 'plzvnzktffhy4r23znsp0x0j7x0d1w'
+    const clientId = 'plzvnzktffhy4r23znsp0x0j7x0d1w';
 
     let connectedAccount = document.querySelector('#connectedAccount span');
     let targetChannel = document.querySelector('#channel');
@@ -11,11 +11,12 @@
     let startAmount = document.querySelector('#startAmount');
     let lowerLimit = document.querySelector('#lowerLimit');
     let balance = document.querySelector('#balance');
-    let winrate = document.querySelector('#winrate');
-    let status = document.querySelector('#status');
+    let winrate = document.querySelector('#winrate span');
+    let status = document.querySelector('#status span');
+    let stopBeforeLowerLimit = document.querySelector('#stopBeforeLowerLimit');
 
     let token = loadToken();
-    let ws;
+    let ws = null;
     let wsIsOpen = false;
 
     let currentConnectedUsername;
@@ -37,6 +38,7 @@
     let currentBalance = 0;
     let currentAmount;
     let lastWin = true;
+    let currentStopBeforeLowerLimit = false;
 
     let gambleInterval = null;
     let infoInterval = null;
@@ -148,9 +150,14 @@
             stop();
         }
     }
-
+    
     function sendTTVInfo() {
         sendTTVMessage('/me [Yazaar Gamble Script] Is this script annoying you? If so, take action as the caster and type "--DisableGambleScript" to exit immediately! Sorry for the inconvenience...')
+    }
+    
+    function limitBypassed() {
+        console.log('Whoops... You seem to have bypassed your lower limit, sorry :) But I am disabling the auto gamble right now!');
+        stop();
     }
 
     function onWSMessage(data) {
@@ -199,16 +206,16 @@
         winrate.innerText = ((wins/(wins+losses))*100).toFixed(2);
         balance.innerText = currentBalance;
         
-        if (balance < currentLowerLimit){
-            console.log('Whoops... You seem to have bypassed your lower limit, sorry :) But I am disabling the auto gamble right now!')
-            clearInterval(gambleInterval);
-            clearInterval(infoInterval);
+        if (currentBalance <= currentLowerLimit){
+            limitBypassed();
         }
 
         doGamble = true;
     }
 
     function onWSOpen(msg) {
+        console.log(msg);
+        status.innerText = 'online';
         wsIsOpen = true;
         ws.send("PASS oauth:" + token + "\r\n");
         ws.send("NICK " + currentConnectedUsername + "\r\n");
@@ -216,8 +223,9 @@
     }
     
     function onWSClose(msg) {
-        wsIsOpen = false;
         console.log(msg);
+        status.innerText = 'offline';
+        wsIsOpen = false;
     }
     
     function onWSError(msg) {
@@ -237,10 +245,19 @@
             currentAmount = currentAmount * 2;
         }
 
+        if (currentStopBeforeLowerLimit && currentBalance - currentAmount <= currentLowerLimit) {
+            limitBypassed();
+            return;
+        }
+
         sendTTVMessage(currentCommand + ' ' + currentAmount);
     }
 
     function stop() {
+        if (ws !== null) {
+            ws.close();
+            ws = null;
+        }
         if (gambleInterval !== null) {
             clearInterval(gambleInterval);
             gambleInterval = null;
@@ -273,7 +290,7 @@
             return;
         }
 
-
+        currentStopBeforeLowerLimit = stopBeforeLowerLimit.checked;
         currentBot = bot.value.toLowerCase();
         currentCommand = command.value;
         currentWinRegex = new RegExp(winRegex.value);
@@ -282,6 +299,8 @@
         currentTimeout = parseInt(timeout.value);
         currentLowerLimit = parseInt(lowerLimit.value);
         currentStartAmount = parseInt(startAmount.value);
+
+        currentAmount = null;
 
         currentBot = ':' + currentBot + '!' + currentBot + '@' + currentBot + '.tmi.twitch.tv'; 
         currentTargetChannelMatch = ':' + currentTargetChannel + '!' + currentTargetChannel + '@' + currentTargetChannel + '.tmi.twitch.tv'; 
@@ -301,6 +320,8 @@
             return;
         }
 
+        stop();
+
         if (window.location.protocol === 'https:'){
             ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
         } else {
@@ -311,8 +332,6 @@
         ws.onmessage = onWSMessage;
         ws.onerror = onWSError;
         ws.onopen = onWSOpen;
-
-        stop();
 
         infoInterval = setInterval(sendTTVInfo, currentTimeout*8);
     }
