@@ -1,198 +1,323 @@
-let LowerLimit
-let scores = {'wins':0, 'losses':0}
-if (true){
-    let ws
-    let TMI
-    let timeout
-    let username
-    let channel
-    let command
-    let win
-    let start
-    let current
-    let bot
-    let caster
-    let IdentifyMessage
-    let balance = 0
-    let MainLoop
-    let SecondaryLoop
-    let checkStreamStatusInterval
-    let LatestMessage
-    let NewMessage = false
+(function(){
+    const clientId = 'plzvnzktffhy4r23znsp0x0j7x0d1w'
 
-    let closeConnection = function(){
-        clearInterval(MainLoop)
-        clearInterval(SecondaryLoop)
-        clearInterval(checkStreamStatusInterval)
-        ws.close()
-    }
+    let connectedAccount = document.querySelector('#connectedAccount span');
+    let targetChannel = document.querySelector('#channel');
+    let timeout = document.querySelector('#timeout');
+    let bot = document.querySelector('#bot');
+    let command = document.querySelector('#command');
+    let msgFilter = document.querySelector('#msgFilter');
+    let winRegex = document.querySelector('#winRegex');
+    let startAmount = document.querySelector('#startAmount');
+    let lowerLimit = document.querySelector('#lowerLimit');
+    let balance = document.querySelector('#balance');
+    let winrate = document.querySelector('#winrate');
+    let status = document.querySelector('#status');
 
-    let checkStreamStatus = function(){
-        let statusXML = new XMLHttpRequest()
-        statusXML.onreadystatechange = function(event){
-            if (event.currentTarget.readyState === 4){
-                if (JSON.parse(this.response).data.length == 1){
-                    sendMessage('/me [Yazaar Gamble Script] Noticed that you went live, the script has been terminated automatically for your own convenience. Have an awesome stream!')
-                    console.log('STREAMER WENT LIVE, I CAN NOT LET YOU CONTINUE USING MY SCRIPT (TO AVOID FLOODING)')
-                    closeConnection()
-                }
-            }
+    let token = loadToken();
+    let ws;
+    let wsIsOpen = false;
+
+    let currentConnectedUsername;
+    let currentConnectedId;
+
+    let currentTargetChannel;
+    let currentTargetChannelId;
+    let currentTargetChannelMatch;
+    let currentLowerLimit;
+    let currentTimeout;
+    let currentBot;
+    let currentCommand;
+    let currentWinRegex;
+    let currentStartAmount;
+    let currentMsgFilter;
+
+    let wins = 0;
+    let losses = 0;
+    let currentBalance = 0;
+    let currentAmount;
+    let lastWin = true;
+
+    let gambleInterval = null;
+    let infoInterval = null;
+
+    let doGamble = true;
+
+    document.querySelector('#authenticate').href = 'https://id.twitch.tv/oauth2/authorize?client_id=' + clientId + '&response_type=token&force_verify=true&scope=chat:read%20chat:edit%20channel:moderate%20whispers:read%20whispers:edit&redirect_uri=' + window.location.origin + window.location.pathname;
+
+    function loadToken() {
+        let params = new URLSearchParams(window.location.hash.substring(1));
+        window.location.hash = '';
+
+        let token = params.get('access_token');
+
+        if (token) {
+            window.localStorage.setItem('TTVGambler::OAuth', token);
+            return token;
         }
-        statusXML.open('get', 'https://api.twitch.tv/helix/streams?user_login=daxtroid')
-        statusXML.setRequestHeader('Client-ID', 'plzvnzktffhy4r23znsp0x0j7x0d1w')
-        statusXML.send()
-    }
 
-    let sendMessage = function(message) {
-        ws.send("PRIVMSG #" + channel + " :" + message + "\r\n")
+        return window.localStorage.getItem('TTVGambler::OAuth');
     }
-
-    let StartGamble = function() {
-        if (NewMessage === true){
-            NewMessage = false
-            if (win.test(LatestMessage) === true){
-                if (current === start){
-                    current = start+1
-                } else {
-                    current = start
-                }
-                sendMessage(command + ' ' + current)
-                return
-            }
-            current = current * 2
-            sendMessage(command + ' ' + current)
-            return
+    
+    async function getUserId(username) {
+        if (username.length === 0) {
+            return null;
         }
-        sendMessage(command + ' ' + current)
-        return
+
+        let resp = await fetch('https://api.twitch.tv/helix/users?login=' + username, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Client-Id': clientId
+            }
+        });
+
+        let respJson = await resp.json();
+        
+        if (respJson.status >= 400 && respJson.status < 500) {
+            alert(respJson.error + ': ' + respJson.message);
+            return null;
+        }
+
+        if (!respJson.data?.length === 0) {
+            return null;
+        }
+
+        return respJson.data[0].id;
+    }
+    
+    async function isLive(userId) {
+        let resp = await fetch('https://api.twitch.tv/helix/streams?user_id=' + userId, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Client-Id': clientId
+            }
+        });
+    
+        let respJson = await resp.json();
+        
+        if (respJson.status === 401) {
+            alert(respJson.error + ': ' + respJson.message);
+            return -1;
+        }
+    
+        return respJson.data.length === 0 ? 0 : 1;
     }
 
-    let StartTTV = function(TMI, username, channel){
-        if (window.location.protocol === 'https:'){
-            ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443')
+    async function getAccountName(token) {
+        let resp = await fetch('https://id.twitch.tv/oauth2/validate', {
+            headers: {
+                'Authorization': 'OAuth ' + token
+            }
+        });
+
+        let respJson = await resp.json();
+
+        if (respJson.status === 401 || respJson.expires_in === 0) {
+            return null;
+        }
+
+        if (!respJson.scopes.includes('channel:moderate') ||
+            !respJson.scopes.includes('chat:edit') ||
+            !respJson.scopes.includes('chat:read') ||
+            !respJson.scopes.includes('whispers:edit') ||
+            !respJson.scopes.includes('whispers:read')) {
+                return null;
+        }
+
+        return respJson.login;
+    }
+
+    async function setup() {
+        let name = await getAccountName(token);
+        if (name) {
+            currentConnectedUsername = name.toLowerCase();
+            connectedAccount.innerText = currentConnectedUsername;
+            console.log('authenticated');
         } else {
-            ws = new WebSocket('ws://irc-ws.chat.twitch.tv:80')
+            connectedAccount.innerText = '';
+            token = null;
+            window.localStorage.removeItem('TTVGambler::OAuth');
+            console.log('not authenticated');
         }
-
-        ws.onopen = (message) => {
-            console.log('Connecting...')
-            ws.send("PASS " + TMI + "\r\n")
-            ws.send("NICK " + username + "\r\n")
-            ws.send("JOIN #" + channel + "\r\n")
-        }
-
-        ws.onmessage = (message) => {
-            if (caster.test(message.data) && message.data.toLowerCase().includes('--disablegamblescript')){
-                closeConnection()
-                console.log('The caster for the channel took action and disabled this script')
-                sendMessage('Got it, disabling the script right now')
-                return
-            }
-            if (message.data === "PING :tmi.twitch.tv\r\n") {
-                ws.send("PONG :tmi.twitch.tv\r\n")
-                return
-            }
-            if(message.data.includes(':End of /NAMES list')){
-                if (! message.data.includes('PRIVMSG')){
-                    console.log('Connected!')
-                    sendMessage(command + ' ' + current)
-                }
-                return
-            }
-            let msg = message.data
-            if (bot.test(msg) === false){
-                return
-            }
-            if (IdentifyMessage.test(msg) === false){
-                return
-            }
-            if (win.test(msg)){
-                scores.wins++
-            } else {
-                scores.losses++
-            }
-            document.getElementById('winrate').innerHTML = ((scores.wins/(scores.wins+scores.losses))*100).toFixed(2) + '%'
-
-            if (win.test(msg)){
-                balance += current
-            } else {
-                balance -= current
-            }
-
-            if (balance < LowerLimit){
-                console.log('Whoops... You seem to have bypassed your lower limit, sorry :) But I am disabling the auto gamble right now!')
-                clearInterval(MainLoop)
-                clearInterval(SecondaryLoop)
-            }
-
-            document.getElementById('balance').innerHTML = new String(balance).valueOf()
-
-            NewMessage = true
-            LatestMessage = msg
-        }
-        
-        ws.onclose = (message) => {
-            console.log(message)
-        }
-        
-        ws.onerror = (message) => {
-            console.log(message)
+    }
+    
+    function sendTTVMessage(message) {
+        if (wsIsOpen) {
+            ws.send("PRIVMSG #" + currentTargetChannel + " :" + message + "\r\n");
+        } else {
+            stop();
         }
     }
 
-    document.getElementById('go').addEventListener('click', () => {
-        for (let i of document.querySelectorAll('input')){
-            if (i.value === ''){
-                console.log('Please fill all inputs...')
-                return
-            }
-        }
-        TMI = document.getElementById('TMI').value
-        timeout = parseInt(document.getElementById('timeout').value)
-        username = document.getElementById('username').value
-        channel = document.getElementById('channel').value
-        command = document.getElementById('command').value
-        start = parseInt(document.getElementById('start').value)
-        LowerLimit = parseInt(document.getElementById('LowerLimit').value)
+    function sendTTVInfo() {
+        sendTTVMessage('/me [Yazaar Gamble Script] Is this script annoying you? If so, take action as the caster and type "--DisableGambleScript" to exit immediately! Sorry for the inconvenience...')
+    }
 
-        win = document.getElementById('win').value
-        bot = document.getElementById('bot').value.toLowerCase()
-        if (isNaN(timeout) || isNaN(start) || isNaN(LowerLimit)){
-            console.log('"timeout", "start gamble" and "Lower limit" have to be ints :)')
-            return
-        }
-        if (timeout < 1 || start < 1){
-            console.log('"timeout" and "start gamble" have to be 1 or larger :)')
-            return
-        }
-        if (TMI.substr(0,6) !== 'oauth:'){
-            console.log('Invalid TMI')
-            return
+    function onWSMessage(data) {
+        let msg = data.data;
+
+        if (msg === 'PING :tmi.twitch.tv\r\n') {
+            ws.send('PONG :tmi.twitch.tv\r\n');
+            return;
         }
 
-        let checkStreamXML = new XMLHttpRequest()
-        checkStreamXML.onreadystatechange = function(event){
-            if (event.currentTarget.readyState === 4){
-                let XMLRes = JSON.parse(this.response)
-                if (XMLRes.data.length != 1){
-                    bot = new RegExp('^:' + bot + '!' + bot + '@' + bot + '\.tmi\.twitch\.tv')
-                    caster = new RegExp('^:' + channel.toLowerCase() + '!' + channel.toLowerCase() + '@' + channel.toLowerCase() + '\.tmi\.twitch\.tv')
-                    IdentifyMessage = RegExp(document.getElementById('IdentifyMessage').value)
-                    win = new RegExp(document.getElementById('win').value)
-                    current = start
-                    StartTTV(TMI, username, channel)
-                    MainLoop = setInterval(StartGamble , timeout)
-                    SecondaryLoop = setInterval(()=>{
-                        sendMessage('/me [Yazaar Gamble Script] Is this script annoying you? If so, take action as the caster and type "--DisableGambleScript" to exit immediately! Sorry for the inconvenience... NotLikeThis')
-                    }, timeout*8)
-                    checkStreamStatusInterval = setInterval(checkStreamStatus, 30000)
-                } else {
-                    console.log('the streamer is live, I can not let you proceed using my script')
-                }
+        if (!msg.includes(' PRIVMSG #')) {
+            if (msg.includes(':End of /NAMES list')) {
+                console.log('Connected!');
+                gambleLoop();
+                gambleInterval = setInterval(gambleLoop, currentTimeout);
             }
+            return;
         }
-        checkStreamXML.open('get', 'https://api.twitch.tv/helix/streams?user_login=' + channel)
-        checkStreamXML.setRequestHeader('Client-ID', 'plzvnzktffhy4r23znsp0x0j7x0d1w')
-        checkStreamXML.send()
-    })
-}
+        
+        let lowmsg = msg.toLowerCase();
+        
+        if (lowmsg.substring(0, currentTargetChannelMatch.length) === currentTargetChannelMatch && lowmsg.includes('--disablegamblescript')){
+            console.log('The caster for the channel took action and disabled this script')
+            sendTTVMessage('Got it, disabling the script right now')
+            stop()
+            return
+        }
+        
+        if (lowmsg.substring(0, currentBot.length) !== currentBot){
+            return;
+        }
+
+        if (!currentMsgFilter.test(msg)) {
+            return;
+        }
+        
+        lastWin = currentWinRegex.test(msg)
+        if (lastWin) {
+            wins++;
+            currentBalance += currentAmount;
+        } else {
+            losses++;
+            currentBalance -= currentAmount;
+        }
+        
+        winrate.innerText = ((wins/(wins+losses))*100).toFixed(2);
+        balance.innerText = currentBalance;
+        
+        if (balance < currentLowerLimit){
+            console.log('Whoops... You seem to have bypassed your lower limit, sorry :) But I am disabling the auto gamble right now!')
+            clearInterval(gambleInterval);
+            clearInterval(infoInterval);
+        }
+
+        doGamble = true;
+    }
+
+    function onWSOpen(msg) {
+        wsIsOpen = true;
+        ws.send("PASS oauth:" + token + "\r\n");
+        ws.send("NICK " + currentConnectedUsername + "\r\n");
+        ws.send("JOIN #" + currentTargetChannel + "\r\n");
+    }
+    
+    function onWSClose(msg) {
+        wsIsOpen = false;
+        console.log(msg);
+    }
+    
+    function onWSError(msg) {
+        console.log(msg);
+    }
+
+    function gambleLoop() {
+        if (!doGamble) {
+            doGamble = true;
+            return;
+        }
+        doGamble = false;
+
+        if (lastWin) {
+            currentAmount = currentAmount === currentStartAmount ? currentStartAmount+1 : currentStartAmount;
+        } else {
+            currentAmount = currentAmount * 2;
+        }
+
+        sendTTVMessage(currentCommand + ' ' + currentAmount);
+    }
+
+    function stop() {
+        if (gambleInterval !== null) {
+            clearInterval(gambleInterval);
+            gambleInterval = null;
+        }
+        if (infoInterval !== null) {
+            clearInterval(infoInterval);
+            infoInterval = null;
+        }
+    }
+
+    async function start() {
+        if (!token) {
+            alert('Invalid token, please authenticate');
+            return;
+        }
+
+        currentTargetChannel = targetChannel.value.toLowerCase();
+        currentTargetChannelId = await getUserId(currentTargetChannel);
+
+        if (!currentTargetChannelId) {
+            alert('Invalid channel target, does not exist');
+            return;
+        }
+        
+        let userLive = await isLive(currentTargetChannelId);
+        if (userLive === 1) {
+            alert('Channel target is live, I can not let you proceed using my script');
+            return;
+        } else if (userLive === -1) {
+            return;
+        }
+
+
+        currentBot = bot.value.toLowerCase();
+        currentCommand = command.value;
+        currentWinRegex = new RegExp(winRegex.value);
+        currentMsgFilter = new RegExp(msgFilter.value);
+        
+        currentTimeout = parseInt(timeout.value);
+        currentLowerLimit = parseInt(lowerLimit.value);
+        currentStartAmount = parseInt(startAmount.value);
+
+        currentBot = ':' + currentBot + '!' + currentBot + '@' + currentBot + '.tmi.twitch.tv'; 
+        currentTargetChannelMatch = ':' + currentTargetChannel + '!' + currentTargetChannel + '@' + currentTargetChannel + '.tmi.twitch.tv'; 
+
+        lastWin = true;
+
+        if (isNaN(currentTimeout) || currentTimeout < 1) {
+            alert('Invalid timeout, has to be an integer larger than 0');
+            return;
+        }
+        if (isNaN(currentLowerLimit)) {
+            alert('Invalid lower limit, has to be an integer');
+            return;
+        }
+        if (isNaN(currentStartAmount) || currentStartAmount < 1) {
+            alert('Invalid start amount, has to be an integer larger than 0');
+            return;
+        }
+
+        if (window.location.protocol === 'https:'){
+            ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+        } else {
+            ws = new WebSocket('ws://irc-ws.chat.twitch.tv:80');
+        }
+
+        ws.onclose = onWSClose;
+        ws.onmessage = onWSMessage;
+        ws.onerror = onWSError;
+        ws.onopen = onWSOpen;
+
+        stop();
+
+        infoInterval = setInterval(sendTTVInfo, currentTimeout*8);
+    }
+
+    document.querySelector('#go').addEventListener('click', start);
+
+    setup();
+})();

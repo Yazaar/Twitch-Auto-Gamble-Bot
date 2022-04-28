@@ -8,22 +8,30 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <a target="_blank" rel="noopener noreferrer" href="https://twitchapps.com/tmi/">TMI URL</a>
-    <input type="password" placeholder="TMI" id="TMI">
-    <input type="text" id="username" placeholder="Your Twitch username">
-    <input type="text" id="channel" placeholder="Twitch channel target">
-    <input type="number" placeholder="Timeout (ms, 1000 = 1 second)" id="timeout">
-    <input type="text" placeholder="Bot name" id="bot">
-    <input type="text" placeholder="Command" id="command">
-    <input type="text" placeholder="Message filter" id="IdentifyMessage">
-    <input type="text" placeholder="Win regex" id="win">
-    <input type="number" placeholder="Start gamble" id="start">
-    <input type="number" placeholder="Lower limit" id="LowerLimit">
-    <div id="go">GO</div>
+    <a id="authenticate">Authenticate here</a>
+    <p id="connectedAccount">Connected account: <span></span></p>
+    <label for="channel">Gamble in:</label>
+    <input type="text" id="channel" placeholder="Twitch channel target" title="ex: ChannelName">
+    <label for="timeout">Time between gambles:</label>
+    <input type="number" placeholder="Timeout (ms, 1000 = 1 second)" id="timeout" title="ex: 5000">
+    <label for="bot">Name of bot:</label>
+    <input type="text" placeholder="Bot name" id="bot" title="ex: StreamElements">
+    <label for="command">The command to execute:</label>
+    <input type="text" placeholder="Command" id="command" title="ex: !gamble">
+    <label for="msgFilter">Message filter/regex:</label>
+    <input type="text" placeholder="Message filter/regex" id="msgFilter" title="Username [^ ]+ \d+ points in roulette">
+    <label for="msgFilter">Win regex:</label>
+    <input type="text" placeholder="Win regex" id="winRegex" title="ex: Username won \d+ points in roulette">
+    <label for="msgFilter">Start amount:</label>
+    <input type="number" placeholder="Start amount" id="startAmount" title="ex: 100">
+    <label for="msgFilter">Max total loss:</label>
+    <input type="number" placeholder="Lower limit" id="lowerLimit" title="ex: -5000">
+    <p id="status">Status: <span></span></p>
+    <div id="go" class="button">GO</div>
     <h3>Change in balance since start:</h3>
     <p id="balance">0</p>
     <h3>Winrate:</h3>
-    <p id="winrate">NaN%</p>
+    <p id="winrate"><span>NaN</span>%</p>
     <script src="./script.js"></script>
 </body>
 </html>
